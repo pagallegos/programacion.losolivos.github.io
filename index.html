@@ -25,22 +25,15 @@
 
 <script>
 
-const dp = new DayPilot.Calendar("mi-calendario", {
-
-    viewType: "Days",
+const dp = new DayPilot.Scheduler("mi-calendario", {
+    startDate: DayPilot.Date.today(),
     days: 7,
-
-    startDate: DayPilot.Date.today().addDays(-1),
-
-    businessBeginsHour: 8,
-    businessEndsHour: 18,
-
-    cellHeight: 25,
-
-    eventMoveHandling: "Update",
-    eventResizeHandling: "Update",
-
-    events: []
+    scale: "Hour",
+    resources: [
+        {name: "Seccionadora", id: "corte"},
+        {name: "Canto 1", id: "canto1"},
+        {name: "Canto 2", id: "canto2"}
+    ]
 
 });
 
