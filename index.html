@@ -1,24 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>APS ARES</title>
+<meta charset="utf-8">
+<title>APS ARES</title>
 
-    <script src="daypilot-all.min.js"></script>
+<script src="daypilot-all.min.js"></script>
 
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-        }
+<style>
+html, body{
+    margin:0;
+    padding:0;
+    height:100%;
+}
 
-        #mi-calendario {
-            height: 100vh;
-        }
-    </style>
+#mi-calendario{
+    width:100%;
+    height:100vh;
+}
+</style>
+
 </head>
-
 <body>
 
 <div id="mi-calendario"></div>
@@ -26,59 +27,88 @@
 <script>
 
 const dp = new DayPilot.Scheduler("mi-calendario", {
-    startDate: DayPilot.Date.today(),
+
+    startDate: DayPilot.Date.today().addDays(-1),
+
     days: 7,
-    scale: "Hour",
+
+    scale: "CellDuration",
+    cellDuration: 10,
+
+    businessBeginsHour: 8,
+    businessEndsHour: 18,
+
+    timeHeaders: [
+        {groupBy:"Day",format:"dd/MM/yyyy"},
+        {groupBy:"Hour",format:"HH:mm"}
+    ],
+
     resources: [
-        {name: "Seccionadora", id: "corte"},
-        {name: "Canto 1", id: "canto1"},
-        {name: "Canto 2", id: "canto2"}
-    ]
+        {name:"SECCIONADORA", id:"corte"},
+        {name:"CANTO 1", id:"canto1"},
+        {name:"CANTO 2", id:"canto2"}
+    ],
+
+    eventMoveHandling: "Update",
+    eventResizeHandling: "Update"
 
 });
 
 dp.init();
 
-function agregarMinutosLaborales(fechaInicio, minutos) {
+function siguienteHoraLaboral(fecha){
 
-    let actual = new DayPilot.Date(fechaInicio);
+    let f = new DayPilot.Date(fecha);
 
-    while (minutos > 0) {
+    if(f.getHours() < 8){
+        return new DayPilot.Date(
+            f.toString("yyyy-MM-dd") + "T08:00:00"
+        );
+    }
 
-        let hora = actual.getHours();
-        let minuto = actual.getMinutes();
+    if(f.getHours() >= 18){
 
-        // Antes de iniciar jornada
-        if (hora < 8) {
-            actual = new DayPilot.Date(
-                actual.toString("yyyy-MM-dd") + "T08:00:00"
-            );
-            hora = 8;
-            minuto = 0;
-        }
+        f = f.addDays(1);
 
-        // Después del fin de jornada
-        if (hora >= 18) {
+        return new DayPilot.Date(
+            f.toString("yyyy-MM-dd") + "T08:00:00"
+        );
+    }
+
+    return f;
+}
+
+function agregarMinutosLaborales(fechaInicio,minutos){
+
+    let actual = siguienteHoraLaboral(fechaInicio);
+
+    while(minutos > 0){
+
+        const minutosActuales =
+            actual.getHours()*60 + actual.getMinutes();
+
+        const minutosDisponibles =
+            (18*60) - minutosActuales;
+
+        if(minutosDisponibles <= 0){
+
             actual = actual.addDays(1);
+
             actual = new DayPilot.Date(
                 actual.toString("yyyy-MM-dd") + "T08:00:00"
             );
+
             continue;
         }
 
-        const minutosActuales = hora * 60 + minuto;
-        const minutosFinJornada = 18 * 60;
-
-        const disponiblesHoy =
-            minutosFinJornada - minutosActuales;
-
-        const avanzar = Math.min(disponiblesHoy, minutos);
+        const avanzar =
+            Math.min(minutos,minutosDisponibles);
 
         actual = actual.addMinutes(avanzar);
 
         minutos -= avanzar;
 
-        if (minutos > 0 && actual.getHours() >= 18) {
+        if(minutos > 0){
 
             actual = actual.addDays(1);
 
@@ -98,102 +128,128 @@ fetch(api)
 .then(r => r.json())
 .then(datos => {
 
-    // Ordenar por fecha de entrega y hora de entrega
-    datos.sort((a,b) => {
+    datos.sort((a,b)=>{
 
-        const fechaA = new Date(a.fecha_entrega + " " + a.hora_entrega);
-        const fechaB = new Date(b.fecha_entrega + " " + b.hora_entrega);
+        const fa = new Date(
+            a.fecha_entrega + " " + a.hora_entrega
+        );
 
-        return fechaA - fechaB;
+        const fb = new Date(
+            b.fecha_entrega + " " + b.hora_entrega
+        );
+
+        return fa - fb;
     });
 
-    let corteActual = new DayPilot.Date(
-        DayPilot.Date.today().toString("yyyy-MM-dd") + "T08:00:00"
-    );
+    let corteDisponible =
+        new DayPilot.Date(
+            DayPilot.Date.today().toString("yyyy-MM-dd")
+            + "T08:00:00"
+        );
 
-    let canto1Actual = corteActual;
-    let canto2Actual = corteActual;
+    let canto1Disponible = corteDisponible;
+    let canto2Disponible = corteDisponible;
 
     let id = 1;
 
-    datos.forEach(p => {
+    datos.forEach(p=>{
 
-        const piezas = Number(p.piezas) || 0;
-        const canto = Number(p.canto) || 0;
+        const piezas =
+            Number(p.piezas) || 0;
 
-        // 1700 piezas en 600 minutos
-        const tiempoCorte = (piezas / 1700) * 600;
+        const metrosCanto =
+            Number(p.canto) || 0;
 
-        // 1500 metros en 480 minutos
-        const tiempoCanto = (canto / 1500) * 480;
+        const tiempoCorte =
+            (piezas / 1700) * 600;
 
-        // -------- CORTE ---------
+        const tiempoCanto =
+            (metrosCanto / 1500) * 480;
 
-        const inicioCorte = corteActual;
+        //------------------------
+        // CORTE
+        //------------------------
 
-        const finCorte = agregarMinutosLaborales(
-            inicioCorte,
-            tiempoCorte
-        );
+        const inicioCorte =
+            siguienteHoraLaboral(
+                corteDisponible
+            );
+
+        const finCorte =
+            agregarMinutosLaborales(
+                inicioCorte,
+                tiempoCorte
+            );
 
         dp.events.add({
-            id: id++,
-            start: inicioCorte,
-            end: finCorte,
-            text: `CORTE LP ${p.lp} - ${p.cliente}`,
-            backColor: "#2196F3"
+            id:id++,
+            resource:"corte",
+            start:inicioCorte,
+            end:finCorte,
+            text:`LP ${p.lp} - ${p.cliente}`,
+            backColor:"#2196F3"
         });
 
-        corteActual = finCorte;
+        corteDisponible = finCorte;
 
-        // -------- CANTO ---------
+        //------------------------
+        // CANTO
+        //------------------------
 
-        let inicioCanto;
+        if(metrosCanto > 0){
 
-        if (canto1Actual <= canto2Actual) {
+            let maquina;
+            let inicioCanto;
+
+            if(canto1Disponible <= canto2Disponible){
+
+                maquina = "canto1";
+
+                inicioCanto =
+                    canto1Disponible > finCorte
+                    ? canto1Disponible
+                    : finCorte;
+
+            }
+            else{
+
+                maquina = "canto2";
+
+                inicioCanto =
+                    canto2Disponible > finCorte
+                    ? canto2Disponible
+                    : finCorte;
+            }
 
             inicioCanto =
-                canto1Actual > finCorte
-                ? canto1Actual
-                : finCorte;
+                siguienteHoraLaboral(
+                    inicioCanto
+                );
 
-            const finCanto = agregarMinutosLaborales(
-                inicioCanto,
-                tiempoCanto
-            );
-
-            dp.events.add({
-                id: id++,
-                start: inicioCanto,
-                end: finCanto,
-                text: `CANTO 1 LP ${p.lp}`,
-                backColor: "#4CAF50"
-            });
-
-            canto1Actual = finCanto;
-
-        }
-        else {
-
-            inicioCanto =
-                canto2Actual > finCorte
-                ? canto2Actual
-                : finCorte;
-
-            const finCanto = agregarMinutosLaborales(
-                inicioCanto,
-                tiempoCanto
-            );
+            const finCanto =
+                agregarMinutosLaborales(
+                    inicioCanto,
+                    tiempoCanto
+                );
 
             dp.events.add({
-                id: id++,
-                start: inicioCanto,
-                end: finCanto,
-                text: `CANTO 2 LP ${p.lp}`,
-                backColor: "#FF9800"
+                id:id++,
+                resource:maquina,
+                start:inicioCanto,
+                end:finCanto,
+                text:`LP ${p.lp}`,
+                backColor:
+                    maquina === "canto1"
+                    ? "#4CAF50"
+                    : "#FF9800"
             });
 
-            canto2Actual = finCanto;
+            if(maquina === "canto1"){
+                canto1Disponible = finCanto;
+            }
+            else{
+                canto2Disponible = finCanto;
+            }
         }
 
     });
@@ -201,10 +257,8 @@ fetch(api)
     dp.update();
 
 })
-.catch(error => {
-
+.catch(error=>{
     console.log(error);
-
 });
 
 </script>
