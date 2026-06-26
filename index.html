@@ -5,7 +5,20 @@
     <title>APS ARES</title>
 
     <script src="daypilot-all.min.js"></script>
+
+    <style>
+        html, body {
+            margin:0;
+            padding:0;
+            height:100%;
+        }
+
+        #mi-calendario {
+            height:100vh;
+        }
+    </style>
 </head>
+
 <body>
 
 <div id="mi-calendario"></div>
@@ -13,32 +26,102 @@
 <script>
 
 const dp = new DayPilot.Calendar("mi-calendario", {
-    viewType: "Day",
 
-    startDate: "2026-06-24",
+    viewType: "Days",
+    days: 7,
+
+    startDate: DayPilot.Date.today().addDays(-1),
 
     businessBeginsHour: 7,
     businessEndsHour: 20,
+
+    cellHeight: 25,
 
     eventMoveHandling: "Update",
     eventResizeHandling: "Update",
 
     events: []
+
 });
 
 dp.init();
-fetch("https://script.google.com/macros/s/AKfycbwq4tQjPsz9ahHP5XV4Cqxx1hE91HXT8Fcd2gz_e885-aRlF0zHcXWKx8g1EYR8ckaX/exec")
+
+const api =
+"https://script.google.com/macros/s/AKfycbwq4tQjPsz9ahHP5XV4Cqxx1hE91HXT8Fcd2gz_e885-aRlF0zHcXWKx8g1EYR8ckaX/exec";
+
+fetch(api)
 .then(r => r.json())
 .then(datos => {
-    console.log("Datos recibidos:");
-    console.log(datos);
+
+    let corteActual = DayPilot.Date.today()
+        .addDays(0)
+        .addHours(7)
+        .addMinutes(20);
+
+    let canto1Actual = corteActual;
+    let canto2Actual = corteActual;
+
+    let id = 1;
+
+    datos.forEach(p => {
+
+        const piezas = Number(p.piezas) || 0;
+        const canto = Number(p.canto) || 0;
+
+        const tiempoCorte = piezas * 0.353;
+        const tiempoCanto = canto * 0.32;
+
+        const finCorte = corteActual.addMinutes(tiempoCorte);
+
+        dp.events.add({
+            id:id++,
+            start:corteActual,
+            end:finCorte,
+            text:`CORTE LP${p.lp} (${piezas} pzs)`,
+            backColor:"#2196F3"
+        });
+
+        corteActual = finCorte;
+
+        if(canto1Actual <= canto2Actual){
+
+            const inicioCanto = canto1Actual > finCorte ? canto1Actual : finCorte;
+            const finCanto = inicioCanto.addMinutes(tiempoCanto);
+
+            dp.events.add({
+                id:id++,
+                start:inicioCanto,
+                end:finCanto,
+                text:`CANTO 1 LP${p.lp} (${canto} ml)`,
+                backColor:"#4CAF50"
+            });
+
+            canto1Actual = finCanto;
+
+        }
+        else{
+
+            const inicioCanto = canto2Actual > finCorte ? canto2Actual : finCorte;
+            const finCanto = inicioCanto.addMinutes(tiempoCanto);
+
+            dp.events.add({
+                id:id++,
+                start:inicioCanto,
+                end:finCanto,
+                text:`CANTO 2 LP${p.lp} (${canto} ml)`,
+                backColor:"#FF9800"
+            });
+
+            canto2Actual = finCanto;
+
+        }
+
+    });
+
+    dp.update();
 
 })
-.catch(error => {
-
-    console.error(error);
-
-});
+.catch(error => console.log(error));
 
 </script>
 
