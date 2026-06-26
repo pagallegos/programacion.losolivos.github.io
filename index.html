@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>APS ARES</title>
+
+    <script src="daypilot-all.min.js"></script>
+</head>
+<body>
+
+<div id="mi-calendario"></div>
+
+<script>
+
+const dp = new DayPilot.Calendar("mi-calendario", {
+    viewType: "Day",
+
+    startDate: "2026-06-24",
+
+    businessBeginsHour: 7,
+    businessEndsHour: 20,
+
+    eventMoveHandling: "Update",
+    eventResizeHandling: "Update",
+
+    events: [
+        {
+            start: "2026-06-24T07:20:00",
+            end: "2026-06-24T09:00:00",
+            id: 1,
+            text: "SECCIONADORA - LP001 ROAN",
+            backColor: "#4CAF50"
+        },
+	{
+            start: "2026-06-24T07:30:00",
+            end: "2026-06-24T09:00:00",
+            id: 2,
+            text: "SECCIONADORA - LP050 CENTRO",
+            backColor: "#4CAF50"
+        },
+
+        {
+            start: "2026-06-24T09:10:00",
+            end: "2026-06-24T10:30:00",
+            id: 3,
+            text: "CANTO 1 - LP001 ROAN",
+            backColor: "#2196F3"
+        },
+        {
+            start: "2026-06-24T09:20:00",
+            end: "2026-06-24T10:30:00",
+            id: 4,
+            text: "CANTO 1 - LP050 CENTRO",
+            backColor: "#2196F3"
+        },
+        {
+            start: "2026-06-24T07:50:00",
+            end: "2026-06-24T08:30:00",
+            id: 5,
+            text: "CANTO 2 - LP001 ROAN",
+            backColor: "#FF9800"
+        },
+        {
+            start: "2026-06-24T07:45:00",
+            end: "2026-06-24T08:32:00",
+            id: 6,
+            text: "CANTO 2 - LP050 CENTRO",
+            backColor: "#FF9800"
+        }
+    ]
+});
+
+dp.init();
+
+</script>
+
+</body>
+</html>
