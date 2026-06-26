@@ -8,13 +8,13 @@
 
     <style>
         html, body {
-            margin:0;
-            padding:0;
-            height:100%;
+            margin: 0;
+            padding: 0;
+            height: 100%;
         }
 
         #mi-calendario {
-            height:100vh;
+            height: 100vh;
         }
     </style>
 </head>
@@ -32,8 +32,8 @@ const dp = new DayPilot.Calendar("mi-calendario", {
 
     startDate: DayPilot.Date.today().addDays(-1),
 
-    businessBeginsHour: 7,
-    businessEndsHour: 20,
+    businessBeginsHour: 8,
+    businessEndsHour: 18,
 
     cellHeight: 25,
 
@@ -46,6 +46,58 @@ const dp = new DayPilot.Calendar("mi-calendario", {
 
 dp.init();
 
+function agregarMinutosLaborales(fechaInicio, minutos) {
+
+    let actual = new DayPilot.Date(fechaInicio);
+
+    while (minutos > 0) {
+
+        let hora = actual.getHours();
+        let minuto = actual.getMinutes();
+
+        // Antes de iniciar jornada
+        if (hora < 8) {
+            actual = new DayPilot.Date(
+                actual.toString("yyyy-MM-dd") + "T08:00:00"
+            );
+            hora = 8;
+            minuto = 0;
+        }
+
+        // Después del fin de jornada
+        if (hora >= 18) {
+            actual = actual.addDays(1);
+            actual = new DayPilot.Date(
+                actual.toString("yyyy-MM-dd") + "T08:00:00"
+            );
+            continue;
+        }
+
+        const minutosActuales = hora * 60 + minuto;
+        const minutosFinJornada = 18 * 60;
+
+        const disponiblesHoy =
+            minutosFinJornada - minutosActuales;
+
+        const avanzar = Math.min(disponiblesHoy, minutos);
+
+        actual = actual.addMinutes(avanzar);
+
+        minutos -= avanzar;
+
+        if (minutos > 0 && actual.getHours() >= 18) {
+
+            actual = actual.addDays(1);
+
+            actual = new DayPilot.Date(
+                actual.toString("yyyy-MM-dd") + "T08:00:00"
+            );
+        }
+    }
+
+    return actual;
+}
+
 const api =
 "https://script.google.com/macros/s/AKfycbwq4tQjPsz9ahHP5XV4Cqxx1hE91HXT8Fcd2gz_e885-aRlF0zHcXWKx8g1EYR8ckaX/exec";
 
@@ -53,10 +105,18 @@ fetch(api)
 .then(r => r.json())
 .then(datos => {
 
-    let corteActual = DayPilot.Date.today()
-        .addDays(0)
-        .addHours(7)
-        .addMinutes(20);
+    // Ordenar por fecha de entrega y hora de entrega
+    datos.sort((a,b) => {
+
+        const fechaA = new Date(a.fecha_entrega + " " + a.hora_entrega);
+        const fechaB = new Date(b.fecha_entrega + " " + b.hora_entrega);
+
+        return fechaA - fechaB;
+    });
+
+    let corteActual = new DayPilot.Date(
+        DayPilot.Date.today().toString("yyyy-MM-dd") + "T08:00:00"
+    );
 
     let canto1Actual = corteActual;
     let canto2Actual = corteActual;
@@ -68,52 +128,79 @@ fetch(api)
         const piezas = Number(p.piezas) || 0;
         const canto = Number(p.canto) || 0;
 
-        const tiempoCorte = piezas * 0.353;
-        const tiempoCanto = canto * 0.32;
+        // 1700 piezas en 600 minutos
+        const tiempoCorte = (piezas / 1700) * 600;
 
-        const finCorte = corteActual.addMinutes(tiempoCorte);
+        // 1500 metros en 480 minutos
+        const tiempoCanto = (canto / 1500) * 480;
+
+        // -------- CORTE ---------
+
+        const inicioCorte = corteActual;
+
+        const finCorte = agregarMinutosLaborales(
+            inicioCorte,
+            tiempoCorte
+        );
 
         dp.events.add({
-            id:id++,
-            start:corteActual,
-            end:finCorte,
-            text:`CORTE LP${p.lp} (${piezas} pzs)`,
-            backColor:"#2196F3"
+            id: id++,
+            start: inicioCorte,
+            end: finCorte,
+            text: `CORTE LP ${p.lp} - ${p.cliente}`,
+            backColor: "#2196F3"
         });
 
         corteActual = finCorte;
 
-        if(canto1Actual <= canto2Actual){
+        // -------- CANTO ---------
 
-            const inicioCanto = canto1Actual > finCorte ? canto1Actual : finCorte;
-            const finCanto = inicioCanto.addMinutes(tiempoCanto);
+        let inicioCanto;
+
+        if (canto1Actual <= canto2Actual) {
+
+            inicioCanto =
+                canto1Actual > finCorte
+                ? canto1Actual
+                : finCorte;
+
+            const finCanto = agregarMinutosLaborales(
+                inicioCanto,
+                tiempoCanto
+            );
 
             dp.events.add({
-                id:id++,
-                start:inicioCanto,
-                end:finCanto,
-                text:`CANTO 1 LP${p.lp} (${canto} ml)`,
-                backColor:"#4CAF50"
+                id: id++,
+                start: inicioCanto,
+                end: finCanto,
+                text: `CANTO 1 LP ${p.lp}`,
+                backColor: "#4CAF50"
             });
 
             canto1Actual = finCanto;
 
         }
-        else{
+        else {
 
-            const inicioCanto = canto2Actual > finCorte ? canto2Actual : finCorte;
-            const finCanto = inicioCanto.addMinutes(tiempoCanto);
+            inicioCanto =
+                canto2Actual > finCorte
+                ? canto2Actual
+                : finCorte;
+
+            const finCanto = agregarMinutosLaborales(
+                inicioCanto,
+                tiempoCanto
+            );
 
             dp.events.add({
-                id:id++,
-                start:inicioCanto,
-                end:finCanto,
-                text:`CANTO 2 LP${p.lp} (${canto} ml)`,
-                backColor:"#FF9800"
+                id: id++,
+                start: inicioCanto,
+                end: finCanto,
+                text: `CANTO 2 LP ${p.lp}`,
+                backColor: "#FF9800"
             });
 
             canto2Actual = finCanto;
-
         }
 
     });
@@ -121,7 +208,11 @@ fetch(api)
     dp.update();
 
 })
-.catch(error => console.log(error));
+.catch(error => {
+
+    console.log(error);
+
+});
 
 </script>
 
