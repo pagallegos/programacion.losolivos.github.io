@@ -7,6 +7,7 @@
 <script src="daypilot-all.min.js"></script>
 
 <style>
+
 html, body{
     margin:0;
     padding:0;
@@ -17,9 +18,11 @@ html, body{
     width:100%;
     height:100vh;
 }
+
 </style>
 
 </head>
+
 <body>
 
 <div id="mi-calendario"></div>
@@ -39,8 +42,8 @@ const dp = new DayPilot.Scheduler("mi-calendario", {
     businessEndsHour: 18,
 
     timeHeaders: [
-        {groupBy:"Day",format:"dd/MM/yyyy"},
-        {groupBy:"Hour",format:"HH:mm"}
+        {groupBy:"Day", format:"dd/MM/yyyy"},
+        {groupBy:"Hour", format:"HH:mm"}
     ],
 
     resources: [
@@ -50,20 +53,28 @@ const dp = new DayPilot.Scheduler("mi-calendario", {
     ],
 
     eventMoveHandling: "Update",
-    eventResizeHandling: "Update"
+    eventResizeHandling: "Update",
+
+    rowHeaderColumns: [
+        {title:"Máquina", width:120}
+    ]
 
 });
 
 dp.init();
 
-function siguienteHoraLaboral(fecha){
+
+
+function normalizarInicio(fecha){
 
     let f = new DayPilot.Date(fecha);
 
     if(f.getHours() < 8){
+
         return new DayPilot.Date(
             f.toString("yyyy-MM-dd") + "T08:00:00"
         );
+
     }
 
     if(f.getHours() >= 18){
@@ -78,9 +89,11 @@ function siguienteHoraLaboral(fecha){
     return f;
 }
 
+
+
 function agregarMinutosLaborales(fechaInicio,minutos){
 
-    let actual = siguienteHoraLaboral(fechaInicio);
+    let actual = normalizarInicio(fechaInicio);
 
     while(minutos > 0){
 
@@ -89,17 +102,6 @@ function agregarMinutosLaborales(fechaInicio,minutos){
 
         const minutosDisponibles =
             (18*60) - minutosActuales;
-
-        if(minutosDisponibles <= 0){
-
-            actual = actual.addDays(1);
-
-            actual = new DayPilot.Date(
-                actual.toString("yyyy-MM-dd") + "T08:00:00"
-            );
-
-            continue;
-        }
 
         const avanzar =
             Math.min(minutos,minutosDisponibles);
@@ -121,11 +123,15 @@ function agregarMinutosLaborales(fechaInicio,minutos){
     return actual;
 }
 
+
+
 const api =
 "https://script.google.com/macros/s/AKfycbwq4tQjPsz9ahHP5XV4Cqxx1hE91HXT8Fcd2gz_e885-aRlF0zHcXWKx8g1EYR8ckaX/exec";
 
 fetch(api)
+
 .then(r => r.json())
+
 .then(datos => {
 
     datos.sort((a,b)=>{
@@ -139,7 +145,10 @@ fetch(api)
         );
 
         return fa - fb;
+
     });
+
+
 
     let corteDisponible =
         new DayPilot.Date(
@@ -152,6 +161,8 @@ fetch(api)
 
     let id = 1;
 
+
+
     datos.forEach(p=>{
 
         const piezas =
@@ -160,18 +171,37 @@ fetch(api)
         const metrosCanto =
             Number(p.canto) || 0;
 
-        const tiempoCorte =
-            (piezas / 1700) * 600;
 
-        const tiempoCanto =
-            (metrosCanto / 1500) * 480;
 
-        //------------------------
+        const tiempoSetupCorte = 10;
+        const tiempoSetupCanto = 5;
+
+
+
+        let tiempoCorte =
+            tiempoSetupCorte +
+            ((piezas/1700)*600);
+
+        let tiempoCanto =
+            tiempoSetupCanto +
+            ((metrosCanto/1500)*480);
+
+
+
+        tiempoCorte =
+            Math.max(tiempoCorte,10);
+
+        tiempoCanto =
+            Math.max(tiempoCanto,10);
+
+
+
+        // =====================
         // CORTE
-        //------------------------
+        // =====================
 
         const inicioCorte =
-            siguienteHoraLaboral(
+            normalizarInicio(
                 corteDisponible
             );
 
@@ -182,33 +212,55 @@ fetch(api)
             );
 
         dp.events.add({
+
             id:id++,
+
             resource:"corte",
+
             start:inicioCorte,
+
             end:finCorte,
-            text:`LP ${p.lp} - ${p.cliente}`,
+
+            text:
+                "LP " + p.lp +
+                "\n" +
+                piezas + " pzs",
+
             backColor:"#2196F3"
+
         });
 
         corteDisponible = finCorte;
 
-        //------------------------
+
+
+        // =====================
         // CANTO
-        //------------------------
+        // =====================
 
         if(metrosCanto > 0){
 
             let maquina;
             let inicioCanto;
 
-            if(canto1Disponible <= canto2Disponible){
+            if(
+                canto1Disponible.getTime()
+                <=
+                canto2Disponible.getTime()
+            ){
 
                 maquina = "canto1";
 
                 inicioCanto =
-                    canto1Disponible > finCorte
-                    ? canto1Disponible
-                    : finCorte;
+                    (
+                        canto1Disponible.getTime()
+                        >
+                        finCorte.getTime()
+                    )
+                    ?
+                    canto1Disponible
+                    :
+                    finCorte;
 
             }
             else{
@@ -216,13 +268,20 @@ fetch(api)
                 maquina = "canto2";
 
                 inicioCanto =
-                    canto2Disponible > finCorte
-                    ? canto2Disponible
-                    : finCorte;
+                    (
+                        canto2Disponible.getTime()
+                        >
+                        finCorte.getTime()
+                    )
+                    ?
+                    canto2Disponible
+                    :
+                    finCorte;
+
             }
 
             inicioCanto =
-                siguienteHoraLaboral(
+                normalizarInicio(
                     inicioCanto
                 );
 
@@ -233,23 +292,40 @@ fetch(api)
                 );
 
             dp.events.add({
+
                 id:id++,
+
                 resource:maquina,
+
                 start:inicioCanto,
+
                 end:finCanto,
-                text:`LP ${p.lp}`,
+
+                text:
+                    "LP " + p.lp +
+                    "\n" +
+                    metrosCanto + " ml",
+
                 backColor:
                     maquina === "canto1"
-                    ? "#4CAF50"
-                    : "#FF9800"
+                    ?
+                    "#4CAF50"
+                    :
+                    "#FF9800"
+
             });
 
             if(maquina === "canto1"){
+
                 canto1Disponible = finCanto;
+
             }
             else{
+
                 canto2Disponible = finCanto;
+
             }
+
         }
 
     });
@@ -257,8 +333,11 @@ fetch(api)
     dp.update();
 
 })
-.catch(error=>{
+
+.catch(error => {
+
     console.log(error);
+
 });
 
 </script>
