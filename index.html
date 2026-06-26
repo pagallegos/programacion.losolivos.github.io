@@ -30,7 +30,16 @@ dp.init();
 fetch("https://script.google.com/macros/s/AKfycbwq4tQjPsz9ahHP5XV4Cqxx1hE91HXT8Fcd2gz_e885-aRlF0zHcXWKx8g1EYR8ckaX/exec")
 .then(r => r.json())
 .then(datos => {
+    console.log("Datos recibidos:");
     console.log(datos);
+
+})
+.catch(error => {
+
+    console.error(error);
+
+});
+
 </script>
 
 </body>
