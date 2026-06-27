@@ -28,10 +28,11 @@ html, body {
 
 const dp = new DayPilot.Scheduler("mi-calendario", {
 
-    startDate: DayPilot.Date.today(),
+ startDate: "2026-06-22",
 
     scale: "CellDuration",
     cellDuration: 1,
+    cellWidth: 2,
     days: 7,
 
     timeHeaders: [
@@ -222,9 +223,7 @@ fetch(api)
         .toString("yyyy-MM-dd");
 
     dp.startDate =
-        new DayPilot.Date(fechaBase);
-
-    dp.update();
+      dp.startDate = new DayPilot.Date(fechaBase);
 
     let corteDisponible =
         new DayPilot.Date(
@@ -287,11 +286,13 @@ fetch(api)
                 end: seg.fin,
 
                 text:
-                    "LP " + p.lp +
-                    "\n" +
-                    piezas + " pzs" +
-                    "\n" +
-                    p.cliente,
+                    text:
+    "LP " +
+    p.lp +
+    " | " +
+    piezas +
+    " pzs | " +
+    p.cliente,
 
                 backColor: "#2196F3"
             });
@@ -362,11 +363,13 @@ fetch(api)
                     end: seg.fin,
 
                     text:
-                        "LP " + p.lp +
-                        "\n" +
-                        metrosCanto + " ml" +
-                        "\n" +
-                        p.cliente,
+                       text:
+    "LP " +
+    p.lp +
+    " | " +
+    metrosCanto +
+    " ml | " +
+    p.cliente,
 
                     backColor:
                         maquina === "canto1"
@@ -393,7 +396,8 @@ fetch(api)
         }
     });
 
-    dp.update();
+  dp.update();
+dp.scrollTo(fechaBase + "T08:00:00");
 
 })
 .catch(error => {
