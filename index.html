@@ -30,11 +30,25 @@ html, body{
 const dp = new DayPilot.Scheduler("mi-calendario", {
 
     startDate: "2026-06-22",
+  cellWidth: 2,
+    timeline: []
 
-    scale: "CellDuration",
-    cellDuration: 1,
-    cellWidth: 2,
-    days: 7,
+for(let d=0; d<7; d++){
+
+    for(let h=8; h<20; h++){
+
+        for(let m=0; m<60; m++){
+
+            timeline.push({
+                start: ...,
+                end: ...
+            });
+
+        }
+
+    }
+
+}
 
     showNonBusiness: false,
     businessBeginsHour: 8,
@@ -154,7 +168,11 @@ fetch(api)
         datos[0].fecha_programacion ||
         "2026-06-22";
 
-    dp.startDate = fechaBase;
+    dp.startDate = new DayPilot.Date(
+    fechaBase + "T08:00:00"
+        
+);
+    dp.update();
 
     let corteDisponible =
         new DayPilot.Date(
