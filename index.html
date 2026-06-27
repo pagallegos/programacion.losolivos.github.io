@@ -36,7 +36,7 @@ const dp = new DayPilot.Scheduler("mi-calendario", {
     days: 7,
 
     scale: "CellDuration",
-    cellDuration: 10,
+    cellDuration: 1,
 
     businessBeginsHour: 8,
     businessEndsHour: 18,
@@ -122,7 +122,56 @@ function agregarMinutosLaborales(fechaInicio,minutos){
 
     return actual;
 }
+function crearSegmentos(fechaInicio,minutos){
 
+    let segmentos = [];
+
+    let inicio = normalizarInicio(fechaInicio);
+
+    while(minutos > 0){
+
+        const finJornada =
+            new DayPilot.Date(
+                inicio.toString("yyyy-MM-dd")
+                + "T18:00:00"
+            );
+
+        const minutosDisponibles =
+            finJornada.getTime() -
+            inicio.getTime();
+
+        const minutosDisponiblesReales =
+            minutosDisponibles / 60000;
+
+        const avanzar =
+            Math.min(
+                minutos,
+                minutosDisponiblesReales
+            );
+
+        const fin =
+            inicio.addMinutes(avanzar);
+
+        segmentos.push({
+            inicio:inicio,
+            fin:fin
+        });
+
+        minutos -= avanzar;
+
+        if(minutos > 0){
+
+            inicio =
+                new DayPilot.Date(
+                    inicio.addDays(1)
+                    .toString("yyyy-MM-dd")
+                    + "T08:00:00"
+                );
+        }
+    }
+
+    return segmentos;
+}
 
 
 const api =
@@ -150,11 +199,14 @@ fetch(api)
 
 
 
-    let corteDisponible =
-        new DayPilot.Date(
-            DayPilot.Date.today().toString("yyyy-MM-dd")
-            + "T08:00:00"
-        );
+    const fechaBase =
+    datos[0].fecha_programacion;
+
+let corteDisponible =
+    new DayPilot.Date(
+        fechaBase.substring(0,10) +
+        "T08:00:00"
+    );
 
     let canto1Disponible = corteDisponible;
     let canto2Disponible = corteDisponible;
@@ -211,26 +263,41 @@ fetch(api)
                 tiempoCorte
             );
 
-        dp.events.add({
+       const segmentosCorte =
+    crearSegmentos(
+        inicioCorte,
+        tiempoCorte
+    );
 
-            id:id++,
+segmentosCorte.forEach(seg=>{
 
-            resource:"corte",
+    dp.events.add({
 
-            start:inicioCorte,
+        id:id++,
 
-            end:finCorte,
+        resource:"corte",
 
-            text:
-                "LP " + p.lp +
-                "\n" +
-                piezas + " pzs",
+        start:seg.inicio,
 
-            backColor:"#2196F3"
+        end:seg.fin,
 
-        });
+        text:
+            "LP " + p.lp +
+            "\n" +
+            piezas + " pzs" +
+            "\n" +
+            p.cliente,
 
-        corteDisponible = finCorte;
+        backColor:"#2196F3"
+
+    });
+
+});
+
+   corteDisponible =
+    segmentosCorte[
+        segmentosCorte.length-1
+    ].fin;
 
 
 
@@ -291,38 +358,54 @@ fetch(api)
                     tiempoCanto
                 );
 
-            dp.events.add({
+            const segmentosCanto =
+    crearSegmentos(
+        inicioCanto,
+        tiempoCanto
+    );
 
-                id:id++,
+segmentosCanto.forEach(seg=>{
 
-                resource:maquina,
+    dp.events.add({
 
-                start:inicioCanto,
+        id:id++,
 
-                end:finCanto,
+        resource:maquina,
 
-                text:
-                    "LP " + p.lp +
-                    "\n" +
-                    metrosCanto + " ml",
+        start:seg.inicio,
 
-                backColor:
-                    maquina === "canto1"
-                    ?
-                    "#4CAF50"
-                    :
-                    "#FF9800"
+        end:seg.fin,
 
-            });
+        text:
+            "LP " + p.lp +
+            "\n" +
+            metrosCanto + " ml" +
+            "\n" +
+            p.cliente,
+
+        backColor:
+            maquina==="canto1"
+            ? "#4CAF50"
+            : "#FF9800"
+
+    });
+
+});
 
             if(maquina === "canto1"){
 
-                canto1Disponible = finCanto;
+                canto1Disponible =
+    segmentosCanto[
+        segmentosCanto.length-1
+    ].fin;
 
             }
             else{
 
-                canto2Disponible = finCanto;
+                canto2Disponible =
+    segmentosCanto[
+        segmentosCanto.length-1
+    ].fin;
 
             }
 
