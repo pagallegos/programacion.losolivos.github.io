@@ -33,10 +33,11 @@ const dp = new DayPilot.Scheduler("mi-calendario", {
 
     startDate: DayPilot.Date.today().addDays(-1),
 
-    days: 7,
-
-    scale: "CellDuration",
-    cellDuration: 1,
+   timeline: DayPilot.DateUtil.minutes(
+    new DayPilot.Date(fechaInicio + "T08:00:00"),
+    7 * 10 * 60,
+    1
+),
 
     businessBeginsHour: 8,
     businessEndsHour: 18,
