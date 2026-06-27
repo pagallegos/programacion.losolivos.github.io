@@ -7,22 +7,19 @@
 <script src="daypilot-all.min.js"></script>
 
 <style>
-
-html, body{
-    margin:0;
-    padding:0;
-    height:100%;
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
 }
 
-#mi-calendario{
-    width:100%;
-    height:100vh;
+#mi-calendario {
+    width: 100%;
+    height: 100vh;
 }
-
 </style>
 
 </head>
-
 <body>
 
 <div id="mi-calendario"></div>
@@ -31,54 +28,46 @@ html, body{
 
 const dp = new DayPilot.Scheduler("mi-calendario", {
 
-    startDate: DayPilot.Date.today().addDays(-1),
+    startDate: DayPilot.Date.today(),
 
-   timeline: DayPilot.DateUtil.minutes(
-    new DayPilot.Date(fechaInicio + "T08:00:00"),
-    7 * 10 * 60,
-    1
-),
-
-    businessBeginsHour: 8,
-    businessEndsHour: 18,
+    scale: "CellDuration",
+    cellDuration: 1,
+    days: 7,
 
     timeHeaders: [
-        {groupBy:"Day", format:"dd/MM/yyyy"},
-        {groupBy:"Hour", format:"HH:mm"}
+        { groupBy: "Day", format: "dd/MM/yyyy" },
+        { groupBy: "Hour", format: "HH:mm" }
     ],
 
     resources: [
-        {name:"SECCIONADORA", id:"corte"},
-        {name:"CANTO 1", id:"canto1"},
-        {name:"CANTO 2", id:"canto2"}
+        { name: "SECCIONADORA", id: "corte" },
+        { name: "CANTO 1", id: "canto1" },
+        { name: "CANTO 2", id: "canto2" },
+        { name: "RANURA", id: "ranura" },
+        { name: "PERFORADO", id: "perforado" },
+        { name: "CHAFLÁN", id: "chaflan" },
+        { name: "ESPECIALES", id: "especiales" },
+        { name: "CALIDAD", id: "calidad" }
     ],
 
     eventMoveHandling: "Update",
-    eventResizeHandling: "Update",
-
-    rowHeaderColumns: [
-        {title:"Máquina", width:120}
-    ]
+    eventResizeHandling: "Update"
 
 });
 
 dp.init();
 
-
-
-function normalizarInicio(fecha){
+function normalizarInicio(fecha) {
 
     let f = new DayPilot.Date(fecha);
 
-    if(f.getHours() < 8){
-
+    if (f.getHours() < 8) {
         return new DayPilot.Date(
             f.toString("yyyy-MM-dd") + "T08:00:00"
         );
-
     }
 
-    if(f.getHours() >= 18){
+    if (f.getHours() >= 18) {
 
         f = f.addDays(1);
 
@@ -90,46 +79,62 @@ function normalizarInicio(fecha){
     return f;
 }
 
-
-
-function agregarMinutosLaborales(fechaInicio,minutos){
+function agregarMinutosLaborales(fechaInicio, minutos) {
 
     let actual = normalizarInicio(fechaInicio);
 
-    while(minutos > 0){
+    while (minutos > 0) {
 
         const minutosActuales =
-            actual.getHours()*60 + actual.getMinutes();
+            actual.getHours() * 60 +
+            actual.getMinutes();
 
-        const minutosDisponibles =
-            (18*60) - minutosActuales;
+        const disponibles =
+            (18 * 60) -
+            minutosActuales;
 
         const avanzar =
-            Math.min(minutos,minutosDisponibles);
+            Math.min(
+                minutos,
+                disponibles
+            );
+
+        if (avanzar <= 0) {
+
+            actual = new DayPilot.Date(
+                actual.addDays(1)
+                .toString("yyyy-MM-dd")
+                + "T08:00:00"
+            );
+
+            continue;
+        }
 
         actual = actual.addMinutes(avanzar);
 
         minutos -= avanzar;
 
-        if(minutos > 0){
-
-            actual = actual.addDays(1);
+        if (minutos > 0) {
 
             actual = new DayPilot.Date(
-                actual.toString("yyyy-MM-dd") + "T08:00:00"
+                actual.addDays(1)
+                .toString("yyyy-MM-dd")
+                + "T08:00:00"
             );
         }
     }
 
     return actual;
 }
-function crearSegmentos(fechaInicio,minutos){
+
+function crearSegmentos(fechaInicio, minutos) {
 
     let segmentos = [];
 
-    let inicio = normalizarInicio(fechaInicio);
+    let inicio =
+        normalizarInicio(fechaInicio);
 
-    while(minutos > 0){
+    while (minutos > 0) {
 
         const finJornada =
             new DayPilot.Date(
@@ -137,86 +142,104 @@ function crearSegmentos(fechaInicio,minutos){
                 + "T18:00:00"
             );
 
-        const minutosDisponibles =
-            finJornada.getTime() -
-            inicio.getTime();
-
-        const minutosDisponiblesReales =
-            minutosDisponibles / 60000;
+        const disponibles =
+            (
+                finJornada.getTime() -
+                inicio.getTime()
+            ) / 60000;
 
         const avanzar =
             Math.min(
                 minutos,
-                minutosDisponiblesReales
+                disponibles
             );
+
+        if (avanzar <= 0) {
+
+            inicio = new DayPilot.Date(
+                inicio.addDays(1)
+                .toString("yyyy-MM-dd")
+                + "T08:00:00"
+            );
+
+            continue;
+        }
 
         const fin =
             inicio.addMinutes(avanzar);
 
         segmentos.push({
-            inicio:inicio,
-            fin:fin
+            inicio: inicio,
+            fin: fin
         });
 
         minutos -= avanzar;
 
-        if(minutos > 0){
+        if (minutos > 0) {
 
-            inicio =
-                new DayPilot.Date(
-                    inicio.addDays(1)
-                    .toString("yyyy-MM-dd")
-                    + "T08:00:00"
-                );
+            inicio = new DayPilot.Date(
+                inicio.addDays(1)
+                .toString("yyyy-MM-dd")
+                + "T08:00:00"
+            );
         }
     }
 
     return segmentos;
 }
 
-
 const api =
 "https://script.google.com/macros/s/AKfycbwq4tQjPsz9ahHP5XV4Cqxx1hE91HXT8Fcd2gz_e885-aRlF0zHcXWKx8g1EYR8ckaX/exec";
 
 fetch(api)
-
 .then(r => r.json())
-
 .then(datos => {
 
-    datos.sort((a,b)=>{
+    if (datos.length === 0) return;
 
-        const fa = new Date(
-            a.fecha_entrega + " " + a.hora_entrega
-        );
+    datos.sort((a, b) => {
 
-        const fb = new Date(
-            b.fecha_entrega + " " + b.hora_entrega
-        );
+        const fa =
+            new Date(
+                a.fecha_entrega +
+                " " +
+                a.hora_entrega
+            );
+
+        const fb =
+            new Date(
+                b.fecha_entrega +
+                " " +
+                b.hora_entrega
+            );
 
         return fa - fb;
-
     });
 
-
-
     const fechaBase =
-    datos[0].fecha_programacion;
+        datos[0].fecha_programacion ||
+        DayPilot.Date.today()
+        .toString("yyyy-MM-dd");
 
-let corteDisponible =
-    new DayPilot.Date(
-        fechaBase.substring(0,10) +
-        "T08:00:00"
-    );
+    dp.startDate =
+        new DayPilot.Date(fechaBase);
 
-    let canto1Disponible = corteDisponible;
-    let canto2Disponible = corteDisponible;
+    dp.update();
+
+    let corteDisponible =
+        new DayPilot.Date(
+            fechaBase + "T08:00:00"
+        );
+
+    let canto1Disponible =
+        corteDisponible;
+
+    let canto2Disponible =
+        corteDisponible;
 
     let id = 1;
 
-
-
-    datos.forEach(p=>{
+    datos.forEach(p => {
 
         const piezas =
             Number(p.piezas) || 0;
@@ -224,200 +247,155 @@ let corteDisponible =
         const metrosCanto =
             Number(p.canto) || 0;
 
+        const tiempoCorte =
+            Math.max(
+                10 +
+                ((piezas / 1700) * 600),
+                10
+            );
 
+        const tiempoCanto =
+            Math.max(
+                5 +
+                ((metrosCanto / 1500) * 480),
+                10
+            );
 
-        const tiempoSetupCorte = 10;
-        const tiempoSetupCanto = 5;
-
-
-
-        let tiempoCorte =
-            tiempoSetupCorte +
-            ((piezas/1700)*600);
-
-        let tiempoCanto =
-            tiempoSetupCanto +
-            ((metrosCanto/1500)*480);
-
-
-
-        tiempoCorte =
-            Math.max(tiempoCorte,10);
-
-        tiempoCanto =
-            Math.max(tiempoCanto,10);
-
-
-
-        // =====================
         // CORTE
-        // =====================
 
         const inicioCorte =
             normalizarInicio(
                 corteDisponible
             );
 
-        const finCorte =
-            agregarMinutosLaborales(
+        const segmentosCorte =
+            crearSegmentos(
                 inicioCorte,
                 tiempoCorte
             );
 
-       const segmentosCorte =
-    crearSegmentos(
-        inicioCorte,
-        tiempoCorte
-    );
+        segmentosCorte.forEach(seg => {
 
-segmentosCorte.forEach(seg=>{
+            dp.events.add({
 
-    dp.events.add({
+                id: id++,
 
-        id:id++,
+                resource: "corte",
 
-        resource:"corte",
+                start: seg.inicio,
 
-        start:seg.inicio,
+                end: seg.fin,
 
-        end:seg.fin,
+                text:
+                    "LP " + p.lp +
+                    "\n" +
+                    piezas + " pzs" +
+                    "\n" +
+                    p.cliente,
 
-        text:
-            "LP " + p.lp +
-            "\n" +
-            piezas + " pzs" +
-            "\n" +
-            p.cliente,
+                backColor: "#2196F3"
+            });
 
-        backColor:"#2196F3"
+        });
 
-    });
+        const finCorte =
+            segmentosCorte[
+                segmentosCorte.length - 1
+            ].fin;
 
-});
+        corteDisponible = finCorte;
 
-   corteDisponible =
-    segmentosCorte[
-        segmentosCorte.length-1
-    ].fin;
-
-
-
-        // =====================
         // CANTO
-        // =====================
 
-        if(metrosCanto > 0){
+        if (metrosCanto > 0) {
 
             let maquina;
             let inicioCanto;
 
-            if(
+            if (
                 canto1Disponible.getTime()
                 <=
                 canto2Disponible.getTime()
-            ){
+            ) {
 
                 maquina = "canto1";
 
                 inicioCanto =
-                    (
-                        canto1Disponible.getTime()
-                        >
-                        finCorte.getTime()
-                    )
+                    canto1Disponible.getTime()
+                    >
+                    finCorte.getTime()
                     ?
                     canto1Disponible
                     :
                     finCorte;
-
             }
-            else{
+            else {
 
                 maquina = "canto2";
 
                 inicioCanto =
-                    (
-                        canto2Disponible.getTime()
-                        >
-                        finCorte.getTime()
-                    )
+                    canto2Disponible.getTime()
+                    >
+                    finCorte.getTime()
                     ?
                     canto2Disponible
                     :
                     finCorte;
-
             }
 
-            inicioCanto =
-                normalizarInicio(
-                    inicioCanto
-                );
-
-            const finCanto =
-                agregarMinutosLaborales(
+            const segmentosCanto =
+                crearSegmentos(
                     inicioCanto,
                     tiempoCanto
                 );
 
-            const segmentosCanto =
-    crearSegmentos(
-        inicioCanto,
-        tiempoCanto
-    );
+            segmentosCanto.forEach(seg => {
 
-segmentosCanto.forEach(seg=>{
+                dp.events.add({
 
-    dp.events.add({
+                    id: id++,
 
-        id:id++,
+                    resource: maquina,
 
-        resource:maquina,
+                    start: seg.inicio,
 
-        start:seg.inicio,
+                    end: seg.fin,
 
-        end:seg.fin,
+                    text:
+                        "LP " + p.lp +
+                        "\n" +
+                        metrosCanto + " ml" +
+                        "\n" +
+                        p.cliente,
 
-        text:
-            "LP " + p.lp +
-            "\n" +
-            metrosCanto + " ml" +
-            "\n" +
-            p.cliente,
+                    backColor:
+                        maquina === "canto1"
+                        ?
+                        "#4CAF50"
+                        :
+                        "#FF9800"
 
-        backColor:
-            maquina==="canto1"
-            ? "#4CAF50"
-            : "#FF9800"
+                });
 
-    });
+            });
 
-});
+            const finCanto =
+                segmentosCanto[
+                    segmentosCanto.length - 1
+                ].fin;
 
-            if(maquina === "canto1"){
-
-                canto1Disponible =
-    segmentosCanto[
-        segmentosCanto.length-1
-    ].fin;
-
+            if (maquina === "canto1") {
+                canto1Disponible = finCanto;
             }
-            else{
-
-                canto2Disponible =
-    segmentosCanto[
-        segmentosCanto.length-1
-    ].fin;
-
+            else {
+                canto2Disponible = finCanto;
             }
-
         }
-
     });
 
     dp.update();
 
 })
-
 .catch(error => {
 
     console.log(error);
