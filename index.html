@@ -31,24 +31,32 @@ const dp = new DayPilot.Scheduler("mi-calendario", {
 
     startDate: "2026-06-22",
   cellWidth: 2,
-    timeline: []
+    const dp = new DayPilot.Scheduler("mi-calendario", {
 
-for(let d=0; d<7; d++){
+    startDate: "2026-06-22",
 
-    for(let h=8; h<20; h++){
+    scale: "CellDuration",
+    cellDuration: 1,
+    cellWidth: 2,
+    days: 7,
 
-        for(let m=0; m<60; m++){
+    timeHeaders: [
+        {groupBy:"Day",format:"dd/MM/yyyy"},
+        {groupBy:"Hour",format:"HH:mm"}
+    ],
 
-            timeline.push({
-                start: ...,
-                end: ...
-            });
+    resources: [
+        {name:"SECCIONADORA",id:"corte"},
+        {name:"CANTO 1",id:"canto1"},
+        {name:"CANTO 2",id:"canto2"},
+        {name:"RANURA",id:"ranura"},
+        {name:"PERFORADO",id:"perforado"},
+        {name:"CHAFLÁN",id:"chaflan"},
+        {name:"ESPECIALES",id:"especiales"},
+        {name:"CALIDAD",id:"calidad"}
+    ]
 
-        }
-
-    }
-
-}
+});
 
     showNonBusiness: false,
     businessBeginsHour: 8,
