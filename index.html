@@ -37,7 +37,10 @@ const dp = new DayPilot.Scheduler("mi-calendario", {
     cellDuration: 1,
     cellWidth: 2,
     days: 7,
-
+    showNonBusiness: false,
+    businessBeginsHour: 8,
+    businessEndsHour: 20,
+    
     timeHeaders: [
         {groupBy:"Day",format:"dd/MM/yyyy"},
         {groupBy:"Hour",format:"HH:mm"}
@@ -56,9 +59,7 @@ const dp = new DayPilot.Scheduler("mi-calendario", {
 
 });
 
-    showNonBusiness: false,
-    businessBeginsHour: 8,
-    businessEndsHour: 20,
+
 
     timeHeaders: [
         {groupBy:"Day",format:"dd/MM/yyyy"},
