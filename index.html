@@ -29,13 +29,12 @@ html, body{
 
 const dp = new DayPilot.Scheduler("mi-calendario", {
 
-  
-
     startDate: "2026-06-22",
 
-    scale: "Manual",
-cellWidth: 10,
-timeline: [],
+    scale: "CellDuration",
+    cellDuration: 1,
+    cellWidth: 10,
+    days: 7,
     showNonBusiness: false,
     businessBeginsHour: 8,
     businessEndsHour: 20,
