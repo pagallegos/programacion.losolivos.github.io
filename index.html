@@ -33,10 +33,9 @@ const dp = new DayPilot.Scheduler("mi-calendario", {
 
     startDate: "2026-06-22",
 
-    scale: "CellDuration",
-    cellDuration: 1,
-    cellWidth: 2,
-    days: 7,
+    scale: "Manual",
+cellWidth: 10,
+timeline: [],
     showNonBusiness: false,
     businessBeginsHour: 8,
     businessEndsHour: 20,
@@ -61,7 +60,30 @@ const dp = new DayPilot.Scheduler("mi-calendario", {
     eventResizeHandling:"Update"
 
 });
+const inicio = new DayPilot.Date("2026-06-22T08:00:00");
 
+for(let d = 0; d < 7; d++){
+
+    for(let h = 8; h < 20; h++){
+
+        for(let m = 0; m < 60; m++){
+
+            const start =
+                inicio
+                .addDays(d)
+                .addHours(h - 8)
+                .addMinutes(m);
+
+            const end =
+                start.addMinutes(1);
+
+            dp.timeline.push({
+                start: start,
+                end: end
+            });
+        }
+    }
+}
 dp.init();
 
 function normalizarInicio(fecha){
